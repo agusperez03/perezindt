@@ -593,14 +593,17 @@
 
                 <!-- Footer botones -->
                 <div class="flex flex-col sm:flex-row items-center gap-3 pt-1">
-                    <button type="submit" onclick="validateForm()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#870142] text-white text-sm font-medium rounded-md hover:bg-[#6b0134] transition-colors shadow-md shadow-[#870142]/20">
-                        Enviar consulta
-                        <iconify-icon icon="solar:plain-linear" class="text-base"></iconify-icon>
+                    <button id="submit-btn" type="submit" onclick="submitForm()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#870142] text-white text-sm font-medium rounded-md hover:bg-[#6b0134] transition-colors shadow-md shadow-[#870142]/20 disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span id="submit-label">Enviar consulta</span>
+                        <iconify-icon id="submit-icon" icon="solar:plain-linear" class="text-base"></iconify-icon>
                     </button>
                     <button type="button" onclick="closeModal()" class="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 bg-white text-gray-600 border border-[#e8e8e8] text-sm font-medium rounded-md hover:bg-gray-50 transition-colors">
                         Cancelar
                     </button>
                 </div>
+                <!-- Feedback messages -->
+                <p id="form-success" class="hidden text-sm text-green-600 font-medium text-center pt-1">¡Mensaje enviado! Te contactamos a la brevedad.</p>
+                <p id="form-error" class="hidden text-sm text-[#870142] font-medium text-center pt-1">Hubo un problema al enviar. Intentá de nuevo.</p>
             </form>
         </div>
     </div>
@@ -650,7 +653,7 @@
             document.getElementById('mobile-menu').classList.remove('open');
             document.getElementById('hamburger-icon').setAttribute('icon', 'solar:hamburger-menu-linear');
         }
-        function validateForm() {
+        function validateFields() {
             const fields = [
                 { id: 'f-nombre', type: 'text' },
                 { id: 'f-telefono', type: 'text' },
@@ -672,6 +675,52 @@
                     err.classList.add('hidden');
                 }
             });
+            return valid;
+        }
+
+        async function submitForm() {
+            // Hide previous feedback
+            document.getElementById('form-success').classList.add('hidden');
+            document.getElementById('form-error').classList.add('hidden');
+
+            if (!validateFields()) return;
+
+            const btn   = document.getElementById('submit-btn');
+            const label = document.getElementById('submit-label');
+            const icon  = document.getElementById('submit-icon');
+
+            // Loading state
+            btn.disabled = true;
+            label.textContent = 'Enviando...';
+            icon.setAttribute('icon', 'solar:refresh-linear');
+
+            try {
+                const res = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre:   document.getElementById('f-nombre').value.trim(),
+                        telefono: document.getElementById('f-telefono').value.trim(),
+                        email:    document.getElementById('f-email').value.trim(),
+                        mensaje:  document.getElementById('f-mensaje').value.trim(),
+                    })
+                });
+
+                if (res.ok) {
+                    // Success
+                    document.getElementById('contact-form').reset();
+                    document.getElementById('form-success').classList.remove('hidden');
+                    label.textContent = 'Enviado';
+                    icon.setAttribute('icon', 'solar:check-circle-linear');
+                } else {
+                    throw new Error('server error');
+                }
+            } catch (e) {
+                document.getElementById('form-error').classList.remove('hidden');
+                label.textContent = 'Enviar consulta';
+                icon.setAttribute('icon', 'solar:plain-linear');
+                btn.disabled = false;
+            }
         }
     </script>
 
